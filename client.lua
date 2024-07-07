@@ -7,30 +7,98 @@ AddEventHandler('inventory:showInventory', function(inventoryData)
 end)
 
 function openInventoryMenu()
-    local mainMenu = RageUI.CreateMenu("Inventar", "Dein Inventar")
-    
-    RageUI.Visible(mainMenu, not RageUI.Visible(mainMenu))
-    
-    while mainMenu do
-        Citizen.Wait(0)
-        RageUI.IsVisible(mainMenu, true, true, true, function()
-            for i=1, #inventory, 1 do
-                if inventory[i].count > 0 then
-                    RageUI.Button(inventory[i].label .. " x" .. inventory[i].count, nil, {}, true, {
-                        onSelected = function()
-                            -- Hier kannst du Aktionen hinzufügen, wenn ein Item ausgewählt wird
-                        end
-                    })
-                end
-            end
-        end, function() end)
-        
-        if not RageUI.Visible(mainMenu) then
-            mainMenu = RMenu:DeleteType('mainMenu', true)
+    ESX.UI.Menu.CloseAll()
+
+    local elements = {}
+
+    for i=1, #inventory, 1 do
+        if inventory[i].count > 0 then
+            table.insert(elements, {
+                label = inventory[i].label .. " x" .. inventory[i].count,
+                value = inventory[i].name,
+                count = inventory[i].count
+            })
         end
     end
+
+    ESX.UI.Menu.Open(
+        'default', GetCurrentResourceName(), 'inventory',
+        {
+            title = "Inventar",
+            align = 'top-left',
+            elements = elements
+        },
+        function(data, menu)
+            -- This is where you can add actions when an item is selected
+            local item = data.current.value
+            local count = data.current.count
+
+            -- Example action: Print item information to the console
+            print("Selected item: " .. item .. ", count: " .. count)
+
+            -- You can add more actions here, such as using or dropping the item
+        end,
+        function(data, menu)
+            menu.close()
+        end
+    )
 end
 
-RegisterCommand('showinventory', function()
+
+RegisterCommand('showinventory', function(source)
     TriggerServerEvent('inventory:getInventory')
 end, false)
+
+
+-- Open
+
+RegisterCommand('showinv', function()
+    lib.showContext('showinv')
+  end)
+  
+  lib.registerContext({
+    id = 'showinv',
+    title = 'Spieleraktionen',
+    options = {    
+      {
+        title = 'Nächsten Spieler durchsuchen',
+        description = 'Den Nächsten Spieler durchsuchen.',
+        icon = 'eye',
+        event = 'process',
+        arrow = true,
+        args = {}
+  
+      }
+    }
+})
+
+RegisterNetEvent('process')
+AddEventHandler('process', function()
+
+
+local closestPlayer, closestPlayerDistance = ESX.Game.GetClosestPlayer()
+
+
+
+if closestPlayer == -1 or closestPlayerDistance > 3.0 then
+    ESX.ShowNotification('Niemand in der Nähe')
+   else
+    if lib.progressBar({
+        duration = 3500,
+        label = 'Durchsuche. . .',
+        useWhileDead = false,
+        canCancel = true,
+        disable = {
+            car = true,
+        },
+        anim = {},
+        prop = {},
+    }) then print('success')
+    end
+    local playerId = GetPlayerServerId(closestPlayer)    
+    TriggerServerEvent('inventory:getInventory', playerId)
+end
+
+end)
+
+RegisterKeyMapping('showinv', 'Durchsuche den Nächsten Spieler!', 'keyboard', 'F4')
